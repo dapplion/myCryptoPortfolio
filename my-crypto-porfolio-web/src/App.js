@@ -6,7 +6,7 @@ import generatePassword from 'password-generator'
 import CryptoJS from 'crypto-js'
 
 import openSocket from 'socket.io-client'
-const socket = openSocket('http://192.168.2.87:5000')
+const socket = openSocket('http://localhost:5000')
 console.log('Socket connected, id: ', socket)
 
 // initialize

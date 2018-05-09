@@ -14,3 +14,7 @@ The data input should include
 - [x] Server <-> Client communications
 - [ ] Data input
 - [ ] Data visualization
+
+# State of the art research
+- An asset management and tax reporting application specializing in Cryptoassets [github](https://github.com/rotkehlchenio/rotkehlchen)
+- Unity is Strength - Collaboration is Key - CryptPad is the zero knowledge realtime collaborative editor [live site](https://cryptpad.fr) [github](https://github.com/xwiki-labs/cryptpad)
