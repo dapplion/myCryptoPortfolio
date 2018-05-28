@@ -1,37 +1,76 @@
 import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import Store from './store/store'
+import * as Action from './action/action'
 
 import generatePassword from 'password-generator'
 import CryptoJS from 'crypto-js'
+import nacl from 'tweetnacl'
+import naclUtil from 'tweetnacl-util'
 
 import openSocket from 'socket.io-client'
 const socket = openSocket('http://localhost:5000')
 console.log('Socket connected, id: ', socket)
 
+nacl.util = naclUtil
+
 // initialize
 init()
+
+class AccountList extends Component {
+  render() {
+    let accounts = this.props.accounts || []
+    let accountsRender = accounts.map((account, i) => {
+      return <a key={i} href="#" className="list-group-item list-group-item-action">{account}</a>
+    })
+    return (
+      <div>
+        <div className="row">
+          <h3>Account List</h3>
+        </div>
+        <div className="row">
+          <div className="list-group">
+            {accountsRender}
+          </div>
+        </div>
+      </div>
+    )
+  }
+}
+
 
 class App extends Component {
   constructor() {
     super();
     this.state = {
       // Initial states of variables must be defined in the constructor
-      data: ''
+      data: '',
+      accounts: Store.getAccounts()
     };
   }
 
   componentDidMount() {
-    socket.on('getRes', res => {
-      if (res.err) {
-        console.log('err',res.err,'val',res.val)
-        if (res.err.includes('not found')) put('')
+    Store.on("CHANGE", this.updateAccounts.bind(this))
+
+    socket.on('getRes', (err, res) => {
+      if (err) {
+        console.log('err',err,'val',res)
+        if (err.includes('not found')) put('')
       } else {
-        let data = decrypt(res.val)
-        console.log('Successfully retrieved data: ',data)
+        console.log('Successfully retrieved data: ',res)
+        let data = decrypt(res)
         this.setState({ data });
       }
     })
+  }
+
+  componentWillUnmount() {
+    Store.removeListener("CHANGE", this.updateAccounts.bind(this));
+  }
+
+  updateAccounts() {
+    this.setState({ accounts: Store.getAccounts() });
   }
 
   handleChange(e) {
@@ -39,6 +78,11 @@ class App extends Component {
     console.log('CHANGE: '+data)
     this.setState({ data });
     put(data)
+  }
+
+  addAccount(e) {
+    let input = document.getElementById('accountInput').value
+    Action.addAccount(input)
   }
 
   render() {
@@ -52,7 +96,8 @@ class App extends Component {
           <div className="container">
 
             <div className="row">
-              <div className="input-group mb-3">
+              <h3>Test live collaboration</h3>
+              <div className="input-group">
                 <input type="text" className="form-control" placeholder="Data to encrypt" aria-label="Recipient's username" aria-describedby="basic-addon2"
                 value={this.state.data}
                 onChange={this.handleChange.bind(this)}
@@ -64,6 +109,23 @@ class App extends Component {
               </div>
             </div>
 
+            <div className="row">
+              <h3>Add account</h3>
+              <div className="input-group">
+                <input id="accountInput" type="text" className="form-control" placeholder="Account" aria-label="Account" aria-describedby="basic-addon2">
+                </input>
+                <div className="input-group-append">
+                  <button className="btn btn-outline-secondary" type="button"
+                  onClick={this.addAccount.bind(this)}
+                  >Add account</button>
+                </div>
+              </div>
+            </div>
+
+            <AccountList
+            accounts={this.state.accounts}
+            />
+
           </div>
         </div>
 
@@ -72,56 +134,89 @@ class App extends Component {
   }
 }
 
+
 export default App;
 
-function encrypt(data) {
+function encrypt(messageString) {
+  // Compute vars
   let cred = parseUrlCredentials()
-  return CryptoJS.AES.encrypt(data, cred.psw)
-    .toString()
+  let nonce = nacl.randomBytes(nacl.secretbox.nonceLength)
+  let key = nacl.util.decodeBase64(cred.key)
+  let messageBytes = nacl.util.decodeUTF8(messageString)
+
+  // encrypt
+  let box = nacl.secretbox(messageBytes, nonce, key)
+
+  // Concat
+  let nonceEncoded = nacl.util.encodeBase64( nonce )
+  let cypherText = nacl.util.encodeBase64(box)
+  console.log('CYPHER', nonceEncoded + '.' + cypherText)
+  return nonceEncoded + '.' + cypherText
+  // return CryptoJS.AES.encrypt(data, cred.key)
+  //   .toString()
 }
 
-function decrypt(data) {
-  let cred = parseUrlCredentials()
-  let bytes = CryptoJS.AES.decrypt(data, cred.psw);
-  return bytes.toString(CryptoJS.enc.Utf8);
+function decrypt(input) {
+  // compute vars
+  let nonceEncoded = input.split('.')[0]
+  let cypherText   = input.split('.')[1]
+  let cred  = parseUrlCredentials()
+  let key   = nacl.util.decodeBase64(cred.key)
+  let nonce = nacl.util.decodeBase64(nonceEncoded)
+  let box   = nacl.util.decodeBase64(cypherText)
+
+  // decrypt
+  let messageBytes = nacl.secretbox.open(box, nonce, key)
+  let messageString = nacl.util.encodeUTF8(messageBytes)
+  console.log('MESSAGE',messageString)
+  // let bytes = CryptoJS.AES.decrypt(data, cred.key);
+  // return bytes.toString(CryptoJS.enc.Utf8);
+  return messageString
 }
 
 function get() {
   let cred = parseUrlCredentials()
-  let key = cred.key
-  socket.emit('get', key)
+  let id = cred.id
+  socket.emit('get', id)
 }
 
 function put(data) {
   let cred = parseUrlCredentials()
+  let id = cred.id
   let key = cred.key
-  let psw = cred.psw
-  console.log('PUT PRE-REQ: key',key,'psw',psw,'data',data)
+  console.log('PUT PRE-REQ: id',id,'key',key,'data',data)
   let val = encrypt(data)
-  console.log('PUT REQ: key',key,'val',val)
-  socket.emit('put', { key, val })
+  console.log('PUT REQ: id',id,'val',val)
+  socket.emit('put', id, val)
 }
 
 
 async function init() {
   let credentials = await getCredentials()
+  let id = credentials.id
   let key = credentials.key
-  let psw = credentials.psw
-  get(key)
-  socket.on('getRes', res => {
-    if (res.err) {
-      console.log('err',res.err,'val',res.val)
-      if (res.err.includes('not found')) put(key, psw, '')
+  get(id)
+  socket.on('getRes', (err, res) => {
+    if (err) {
+      console.log('err',err,'val',res)
+      if (err.includes('not found')) put(id, key, '')
     } else {
-      let data = decrypt(res.val)
-      console.log('Successfully retrieved data: ',data)
+      console.log('Successfully retrieved data: ',res)
+      let data = decrypt(res)
     }
   })
+  // // ##########
+  // // ##########
+  // // ##########
+  // Store.on("CHANGE", function(){
+  //   let store = JSON.stringify( Store.getStore() )
+  //   put(store)
+  // })
 }
 
 
 
-// console.log('SENDING KEY:',key,' VAL:',val)
+// console.log('SENDING id:',id,' VAL:',val)
 
 
 function getCredentials() {
@@ -144,22 +239,22 @@ function parseUrlCredentials() {
 
   if (!hash.includes('-')) return
   return {
-    key: hash.split('-')[0],
-    psw: hash.split('-')[1]
+    id: hash.split('-')[0],
+    key: hash.split('-')[1]
   }
 }
 
 function RedirectToNewHash() {
-  let key = generatePassword(12, false)
-  let psw = generatePassword(12, false)
+  let id = nacl.util.encodeBase64( nacl.randomBytes(16) )
+  let key = nacl.util.encodeBase64( nacl.randomBytes(nacl.secretbox.keyLength) )
   let url = window.location.href
   let hash = window.location.hash
   console.log('url',url,'hash',hash)
   url = url.replace(hash, '')
-  let newHash = key + '-' + psw
+  let newHash = id + '-' + key
 
   // initialize database
-  socket.emit('put', { key, val:'' })
+  socket.emit('put', id, '')
 
   // Redirect to new hash
   window.location.replace(url + '#' + newHash)
@@ -168,4 +263,4 @@ function RedirectToNewHash() {
 
 // let credentails = getCredentials()
 // console.log('credentails',credentails)
-// get(credentails.key, credentails.psw)
+// get(credentails.id, credentails.key)

@@ -28,29 +28,32 @@ io.on('connection', function(socket){
 
   socket.on('disconnect', handleDisconnect);
 
-  socket.on('put', (req) => {
+  socket.on('put', (key, val) => {
     console.log('PUT REQ, val: ---')
-    console.log(req.val)
+    console.log(val)
     console.log('-----------------')
-    db.put(req.key, req.val, (err) => {
-      err = String(err)
-      console.log('putRes err: '+err)
-      socket.emit('putRes', { err })
+    db.put(key, val, (err) => {
+      if (err) {
+        console.log('putRes err: ' + String(err))
+        socket.emit('error', String(err))
+      }
     })
-    socket.broadcast.to(req.key).emit('getRes', { val: req.val });
+    socket.broadcast.to(key).emit('getRes', '', val);
   });
 
   socket.on('get', async (key) => {
     socket.join(key)
     console.log('GET REQ, '+JSON.stringify(key))
+    let err, val
     try {
-      let val = ( await db.get(key) ).toString('utf8')
+      val = ( await db.get(key) ).toString('utf8')
       console.log('GET RESOLVED: ----')
       console.log(val)
       console.log('------------------')
-      socket.emit('getRes', { val })
     } catch (e) {
-      socket.emit('getRes', { err: String(e) })
+      err = String(e)
+    } finally {
+      socket.emit('getRes', err, val)
     }
   });
 
