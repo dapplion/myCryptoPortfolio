@@ -1,0 +1,2 @@
+export const FETCH_ACCOUNTS = 'FETCH_ACCOUNTS'
+export const NEW_ACCOUNT = 'NEW_ACCOUNT'
