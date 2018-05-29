@@ -42,4 +42,8 @@ AddAccount.propTypes = {
   addAccount: PropTypes.func.isRequired
 }
 
-export default connect(null, { addAccount })(AddAccount)
+const mapDispatchToProps = dispatch => ({
+  addAccount: account => dispatch(addAccount(account))
+})
+
+export default connect(null, mapDispatchToProps)(AddAccount)

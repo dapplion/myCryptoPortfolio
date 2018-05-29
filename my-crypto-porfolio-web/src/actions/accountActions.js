@@ -1,27 +1,41 @@
-import { FETCH_ACCOUNTS, NEW_ACCOUNT } from './types'
+import { SERVER_UPDATE_ACCOUNTS, ADD_ACCOUNT, REMOVE_ACCOUNT } from './types'
 import etherscan from '../etherscan'
 
 // Exports a function which returns a function with the argument (dispatch)
-export const fetchAccounts = () => dispatch => {
-  fetch('https://jsonplaceholder.typicode.com/users')
-  .then(res => res.json())
-  .then(users => users.map(u => u.email))
-  .then(accounts => dispatch({
-    type: FETCH_ACCOUNTS,
-    payload: accounts
-  }))
-}
+export const updateAccounts = accounts => ({
+  type: SERVER_UPDATE_ACCOUNTS,
+  payload: accounts
+})
 
-export const addAccount = account => dispatch => {
+export const addAccount = account => ({
+  type: ADD_ACCOUNT,
+  upload: true,
+  payload: {
+    account,
+    balance: 'loading...'
+  }
+})
+
+export const removeAccount = account => ({
+  type: REMOVE_ACCOUNT,
+  upload: true,
+  payload: account
+})
+
+
+export const balanceAccount = account => dispatch => {
   // Do something with this account
+  console.log('Calling etherscan for: ',account)
   etherscan.getBalance(account)
   .then(balance => dispatch({
-    type: NEW_ACCOUNT,
+    type: ADD_ACCOUNT,
+    upload: true,
     payload: {
       account,
       balance
     }
   }))
+  .catch(e => console.error)
 }
 
 

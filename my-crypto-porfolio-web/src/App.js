@@ -1,6 +1,4 @@
 import React, { Component } from 'react';
-import Store from './store/store'
-import * as Action from './action/action'
 import { Provider } from 'react-redux'
 import store from './store'
 // components
@@ -18,37 +16,6 @@ import logo from './logo.svg';
 
 
 class App extends Component {
-  constructor() {
-    super();
-    this.state = {
-      // Initial states of variables must be defined in the constructor
-      data: '',
-      accounts: Store.getAccounts()
-    };
-  }
-
-  componentDidMount() {
-    Store.on("CHANGE", this.updateAccounts.bind(this))
-  }
-
-  componentWillUnmount() {
-    Store.removeListener("CHANGE", this.updateAccounts.bind(this));
-  }
-
-  updateAccounts() {
-    this.setState({ accounts: Store.getAccounts() });
-  }
-
-  handleChange(e) {
-    let data = String(e.target.value)
-    console.log('CHANGE: '+data)
-    this.setState({ data });
-  }
-
-  addAccount(e) {
-    let input = document.getElementById('accountInput').value
-    Action.addAccount(input)
-  }
 
   render() {
     return (

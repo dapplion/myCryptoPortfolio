@@ -1,19 +1,29 @@
 import React, { Component } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { removeAccount } from '../actions/accountActions'
 
 class AccountList extends Component {
 
+  remove(account) {
+    return () => {
+      this.props.remove(account)
+    }
+  }
+
   render() {
     let accounts = this.props.accounts || []
-    let tableItems = Object.getOwnPropertyNames(accounts).map((accountName, i) =>
-      (
+    let tableItems = Object.getOwnPropertyNames(accounts).map((account, i) => {
+      return (
         <tr key={i}>
-          <td>{accountName}</td>
-          <td>{accounts[accountName]}</td>
+          <td>{account}</td>
+          <td>{accounts[account]}</td>
+          <td>
+            <button onClick={this.remove.bind(this)(account)}>Remove</button>
+          </td>
         </tr>
       )
-    )
+    })
 
     return (
       <div>
@@ -33,11 +43,19 @@ class AccountList extends Component {
 }
 
 AccountList.propTypes = {
-  accounts: PropTypes.object.isRequired
+  accounts: PropTypes.object.isRequired,
+  remove: PropTypes.func.isRequired
 }
 
 const mapStateToProps = state => ({
   accounts: state.accounts
 })
 
-export default connect(mapStateToProps, {  })(AccountList)
+const mapDispatchToProps = dispatch => ({
+  remove: account => dispatch(removeAccount(account))
+})
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(AccountList)

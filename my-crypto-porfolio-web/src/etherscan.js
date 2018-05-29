@@ -6,7 +6,7 @@ function getBalance(account) {
   .then(res => res.json())
   .then(res => {
     console.log('RES',res)
-    if (res.status) {
+    if (res.status == 1) {
       return res.result / (10 ** 18)
     } else {
       throw Error('Error fetching balance')
