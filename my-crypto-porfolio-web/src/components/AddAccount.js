@@ -1,49 +1,80 @@
-import React, { Component } from 'react'
-import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
-import { addAccount } from '../actions/accountActions'
+import React, { Component } from "react";
+import PropTypes from "prop-types";
+import { withStyles } from "@material-ui/core/styles";
+import { connect } from "react-redux";
+import { addAccount } from "../actions/accountActions";
+import Input from "@material-ui/core/Input";
+import Button from "@material-ui/core/Button";
+import Web3 from "web3";
 
+const web3 = new Web3();
+
+const styles = theme => ({
+  button: {
+    margin: theme.spacing.unit
+  },
+  extendedIcon: {
+    marginRight: theme.spacing.unit
+  },
+  input: {
+    minWidth: "350px"
+  }
+});
 class AddAccount extends Component {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
-      account: ''
-    }
+      account: ""
+    };
   }
 
   onChange(e) {
-    this.setState({ account: e.target.value})
+    this.setState({ account: e.target.value });
   }
 
   addAccount(e) {
-    this.props.addAccount(this.state.account)
+    if (web3.utils.isAddress(this.state.account)) {
+      this.props.addAccount(this.state.account);
+      this.setState({ account: "" });
+    } else {
+      console.error("Wrong address");
+    }
   }
 
   render() {
+    const { classes } = this.props;
     return (
       <div className="row">
-        <h3>Add account</h3>
         <div className="input-group">
-          <input id="accountInput" type="text" className="form-control" placeholder="Account" aria-label="Account" aria-describedby="basic-addon2"
-          onChange={this.onChange.bind(this)}>
-          </input>
-          <div className="input-group-append">
-            <button className="btn btn-outline-secondary" type="button"
+          <Input
+            placeholder="Paste an address"
+            className={classes.input}
+            onChange={this.onChange.bind(this)}
+            value={this.state.account}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.button}
             onClick={this.addAccount.bind(this)}
-            >Add account</button>
-          </div>
+          >
+            Add
+          </Button>
         </div>
       </div>
-    )
+    );
   }
 }
 
 AddAccount.propTypes = {
   addAccount: PropTypes.func.isRequired
-}
+};
 
 const mapDispatchToProps = dispatch => ({
   addAccount: account => dispatch(addAccount(account))
-})
+});
 
-export default connect(null, mapDispatchToProps)(AddAccount)
+export default connect(
+  null,
+  mapDispatchToProps
+)(withStyles(styles)(AddAccount));

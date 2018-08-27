@@ -1,6 +1,3 @@
-// node modules
-const { promisify } = require('util')
-
 // express modules
 const app = require('express')()
 const express = require('express')
@@ -28,39 +25,35 @@ io.on('connection', function(socket){
 
   socket.on('disconnect', handleDisconnect);
 
-  socket.on('put', (key, val) => {
-    console.log('PUT REQ, val: ---')
-    console.log(val)
-    console.log('-----------------')
-    db.put(key, val, (err) => {
-      if (err) {
-        console.log('putRes err: ' + String(err))
-        socket.emit('error', String(err))
-      }
+  socket.on('put', (key, val, callback) => {
+    console.log('PUT from '+socket.id+' to '+key+' of '+Buffer.byteLength(val, 'utf8')+' bytes')
+    db.put(key, val)
+    .then(() => {
+      socket.broadcast.to(key).emit('update', val);
+      callback(null)
     })
-    socket.broadcast.to(key).emit('getRes', '', val);
+    .catch((e) => {
+      callback(String(e))
+      console.log('putRes err: ' + String(e))
+    })
+
   });
 
-  socket.on('get', async (key) => {
+  socket.on('sub', (key, callback) => {
     socket.join(key)
-    console.log('GET REQ, '+JSON.stringify(key))
-    let err, val
-    try {
-      val = ( await db.get(key) ).toString('utf8')
-      console.log('GET RESOLVED: ----')
-      console.log(val)
-      console.log('------------------')
-    } catch (e) {
-      err = String(e)
-    } finally {
-      socket.emit('getRes', err, val)
-    }
+    console.log('SUB from '+socket.id+' to '+key)
+
+    db.get(key)
+    .then(res => res.toString('utf8'))
+    .then(val => {
+      console.log('Sending '+Buffer.byteLength(val, 'utf8')+' bytes to '+socket.id)
+      callback(null, val)
+    })
+    .catch((e) => {
+      callback(String(e))
+      console.log('getRes err: ' + String(e))
+    })
   });
-
-  socket.on('sub', (key) => {
-    socket.join(key)
-  })
-
 });
 
 // launch server

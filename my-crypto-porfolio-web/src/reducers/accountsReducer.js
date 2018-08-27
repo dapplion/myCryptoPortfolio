@@ -1,28 +1,49 @@
-import { SERVER_UPDATE_ACCOUNTS, ADD_ACCOUNT, REMOVE_ACCOUNT } from '../actions/types'
+import {
+  SERVER_UPDATE_ACCOUNTS,
+  ADD_ACCOUNT,
+  REMOVE_ACCOUNT,
+  UPDATE_ACCOUNT
+} from "../actions/types";
 
-const initialState = {'0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a': 0}
+const initialState = {};
 
 const accountsReducer = (state = initialState, action) => {
-
-  switch(action.type) {
-
-    case SERVER_UPDATE_ACCOUNTS:
-      return Object.assign({}, action.payload)
+  switch (action.type) {
+    case "UPDATE_STATE":
+      return action.state.accounts;
 
     case ADD_ACCOUNT:
       return {
         ...state,
-        [action.payload.account]: action.payload.balance
-      }
+        [action.payload.account]: {
+          address: action.payload.account,
+          name: "account #" + Math.floor(100 * Math.random()),
+          lastChecked: 0,
+          balance: "loading..."
+        }
+      };
+
+    case UPDATE_ACCOUNT:
+      return {
+        ...state,
+        [action.address]: {
+          ...state[action.address],
+          balances: {
+            ...state[action.address].balances,
+            ...action.balances
+          },
+          lastChecked: Date.now()
+        }
+      };
 
     case REMOVE_ACCOUNT:
-      let res = Object.assign({}, state)
-      delete res[action.payload]
-      return res
+      let res = Object.assign({}, state);
+      delete res[action.payload];
+      return res;
 
     default:
-      return state
+      return state;
   }
-}
+};
 
-export default accountsReducer
+export default accountsReducer;
